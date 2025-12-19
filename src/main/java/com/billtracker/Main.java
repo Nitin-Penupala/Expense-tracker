@@ -5,113 +5,170 @@ import com.billtracker.service.ExpenseManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class Main {
+    private static ExpenseManager expenseManager = new ExpenseManager();
+    private static Scanner scanner = new Scanner(System.in);
+
     public static void main(String[] args) {
-        ExpenseManager expenseManager = new ExpenseManager();
+        System.out.println("Welcome to Bill Tracker!");
 
-        // 1. Add Users
-        User u1 = new User("u1", "Alice", "alice@test.com", "1234");
-        User u2 = new User("u2", "Bob", "bob@test.com", "5678");
-        User u3 = new User("u3", "Charlie", "charlie@test.com", "9101");
-        User u4 = new User("u4", "David", "david@test.com", "1121");
+        // Check Database Connection
+        try (java.sql.Connection conn = com.billtracker.dao.DBConnection.getConnection()) {
+            if (conn != null) {
+                System.out.println("Database connected successfully!");
+            }
+        } catch (java.sql.SQLException e) {
+            System.out.println("Failed to connect to database: " + e.getMessage());
+            System.out.println("Please ensure the database 'bill_tracker' exists and credentials are correct.");
+            // Optional: return; // to stop if DB is critical
+        }
 
-        expenseManager.addUser(u1);
-        expenseManager.addUser(u2);
-        expenseManager.addUser(u3);
-        expenseManager.addUser(u4);
+        while (true) {
+            printMenu();
+            int choice = 0;
+            try {
+                String line = scanner.nextLine();
+                choice = Integer.parseInt(line);
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number.");
+                continue;
+            }
 
-        System.out.println("Initialized Users: Alice, Bob, Charlie, David");
-        expenseManager.showBalances(); // Should be empty
+            switch (choice) {
+                case 1:
+                    addUser();
+                    break;
+                case 2:
+                    addExpense();
+                    break;
+                case 3:
+                    expenseManager.showBalances();
+                    break;
+                case 4:
+                    System.out.println("Exiting...");
+                    return;
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
 
-        // 2. EQUAL Split
-        // Alice pays 1000 for everyone (250 each)
-        System.out.println("\n--- Expense 1: Alice pays 1000 for everyone (Equal) ---");
-        List<Split> splits1 = new ArrayList<>();
-        splits1.add(new EqualSplit(u1));
-        splits1.add(new EqualSplit(u2));
-        splits1.add(new EqualSplit(u3));
-        splits1.add(new EqualSplit(u4));
+    private static void printMenu() {
+        System.out.println("\n--- Menu ---");
+        System.out.println("1. Add User");
+        System.out.println("2. Add Expense");
+        System.out.println("3. Show Balances");
+        System.out.println("4. Exit");
+        System.out.print("Enter your choice: ");
+    }
 
-        expenseManager.addExpense(ExpenseType.EQUAL, 1000, "u1", splits1, "Lunch");
-        expenseManager.showBalances();
-        // Expected:
-        // Bob owes Alice 250
-        // Charlie owes Alice 250
-        // David owes Alice 250
+    private static void addUser() {
+        System.out.print("Enter User ID: ");
+        String id = scanner.nextLine();
 
-        // 3. EXACT Split
-        // Bob pays 1250: Alice owes 370, Charlie owes 880
-        System.out.println("\n--- Expense 2: Bob pays 1250 for Alice (370) and Charlie (880) (Exact) ---");
-        List<Split> splits2 = new ArrayList<>();
-        splits2.add(new ExactSplit(u1, 370));
-        splits2.add(new ExactSplit(u3, 880));
+        if (expenseManager.getUser(id) != null) {
+            System.out.println("User with this ID already exists.");
+            return;
+        }
 
-        expenseManager.addExpense(ExpenseType.EXACT, 1250, "u2", splits2, "Shopping");
-        expenseManager.showBalances();
-        // Previous State: B->A:250, C->A:250, D->A:250
-        // New Transaction: A->B:370, C->B:880
-        // Net:
-        // A and B: B owes A 250, A owes B 370 => A owes B 120
-        // C and B: C owes B 880
-        // C and A: C owes A 250
-        // D and A: D owes A 250
-        // Result:
-        // A owes B: 120
-        // C owes B: 880
-        // C owes A: 250
-        // D owes A: 250
+        System.out.print("Enter Name: ");
+        String name = scanner.nextLine();
+        System.out.print("Enter Email: ");
+        String email = scanner.nextLine();
+        System.out.print("Enter Phone: ");
+        String phone = scanner.nextLine();
 
-        // 4. PERCENT Split
-        // Charlie pays 1200: Alice 40%, Bob 20%, Charlie 20%, David 20%
-        // Alice: 480, Bob: 240, Charlie: 240, David: 240
-        System.out.println("\n--- Expense 3: Charlie pays 1200 (Percent: A:40, B:20, C:20, D:20) ---");
-        List<Split> splits3 = new ArrayList<>();
-        splits3.add(new PercentSplit(u1, 40));
-        splits3.add(new PercentSplit(u2, 20));
-        splits3.add(new PercentSplit(u3, 20));
-        splits3.add(new PercentSplit(u4, 20));
+        User user = new User(id, name, email, phone);
+        expenseManager.addUser(user);
+        System.out.println("User added successfully.");
+    }
 
-        expenseManager.addExpense(ExpenseType.PERCENT, 1200, "u3", splits3, "Party");
-        expenseManager.showBalances();
-        // New Transaction (Paid by C):
-        // A owes C: 480
-        // B owes C: 240
-        // D owes C: 240
+    private static void addExpense() {
+        System.out.print("Enter User ID who paid: ");
+        String paidById = scanner.nextLine();
+        User paidBy = expenseManager.getUser(paidById);
+        if (paidBy == null) {
+            System.out.println("User not found.");
+            return;
+        }
 
-        // Cumulative with Previous:
-        // 1. A owes B: 120
-        // 2. C owes B: 880
-        // 3. C owes A: 250
-        // 4. D owes A: 250
+        System.out.print("Enter Description: ");
+        String description = scanner.nextLine();
 
-        // Updates:
-        // A and C:
-        // Old: C owes A 250
-        // New: A owes C 480
-        // Net: A owes C (480 - 250) = 230
+        System.out.print("Enter Total Amount: ");
+        double amount = 0;
+        try {
+            amount = Double.parseDouble(scanner.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid amount.");
+            return;
+        }
 
-        // B and C:
-        // Old: C owes B 880
-        // New: B owes C 240
-        // Net: C owes B (880 - 240) = 640
+        System.out.println("Select Expense Type (1: EQUAL, 2: EXACT, 3: PERCENT): ");
+        int typeChoice = 0;
+        try {
+            typeChoice = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid type.");
+            return;
+        }
 
-        // D and C:
-        // New: D owes C 240
+        List<Split> splits = new ArrayList<>();
+        System.out.print("Enter number of users involved in split: ");
+        int numUsers = 0;
+        try {
+            numUsers = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid number.");
+            return;
+        }
 
-        // D and A:
-        // Old: D owes A 250
-        // No change between D and A directly.
+        for (int i = 0; i < numUsers; i++) {
+            System.out.print("Enter User ID for user " + (i + 1) + ": ");
+            String userId = scanner.nextLine();
+            User user = expenseManager.getUser(userId);
+            if (user == null) {
+                System.out.println("User not found: " + userId);
+                // In a real app we might retry or abort. Here we just abort expense creation.
+                return;
+            }
 
-        // A and B:
-        // Old: A owes B 120
-        // No change
+            if (typeChoice == 1) { // EQUAL
+                splits.add(new EqualSplit(user));
+            } else if (typeChoice == 2) { // EXACT
+                System.out.print("Enter amount owed by " + user.getName() + ": ");
+                double share = Double.parseDouble(scanner.nextLine());
+                splits.add(new ExactSplit(user, share));
+            } else if (typeChoice == 3) { // PERCENT
+                System.out.print("Enter percentage owed by " + user.getName() + ": ");
+                double percent = Double.parseDouble(scanner.nextLine());
+                splits.add(new PercentSplit(user, percent));
+            } else {
+                System.out.println("Invalid expense type.");
+                return;
+            }
+        }
 
-        // Final Expected:
-        // A owes B: 120
-        // A owes C: 230
-        // C owes B: 640
-        // D owes A: 250
-        // D owes C: 240
+        ExpenseType type = null;
+        switch (typeChoice) {
+            case 1:
+                type = ExpenseType.EQUAL;
+                break;
+            case 2:
+                type = ExpenseType.EXACT;
+                break;
+            case 3:
+                type = ExpenseType.PERCENT;
+                break;
+        }
+
+        try {
+            expenseManager.addExpense(type, amount, paidById, splits, description);
+            System.out.println("Expense added successfully.");
+        } catch (Exception e) {
+            System.out.println("Error adding expense: " + e.getMessage());
+        }
     }
 }

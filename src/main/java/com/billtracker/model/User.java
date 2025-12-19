@@ -28,10 +28,17 @@ public class User {
     public void setName(String name) {
         this.name = name;
     }
-    
-    // toString, equals, hashCode could be added as needed
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
     @Override
     public String toString() {
-        return name; // Simply return name for easier debugging/printing
+        return name;
     }
 }
