@@ -17,7 +17,7 @@ public class BalanceSheetService {
         this.balanceSheetDAO = new BalanceSheetDAO();
     }
 
-    public void updateBalances(Connection conn, Expense expense) throws SQLException {
+    public void updateBalances(Connection conn, Expense expense, String groupId) throws SQLException {
         User paidBy = expense.getPaidBy();
 
         for (Split split : expense.getSplits()) {
@@ -28,35 +28,42 @@ public class BalanceSheetService {
                 continue;
             }
 
-            addDebt(conn, paidTo.getId(), paidBy.getId(), amount);
+            addDebt(conn, paidTo.getId(), paidBy.getId(), groupId, amount);
         }
     }
 
-    private void addDebt(Connection conn, String userWhoOwesId, String userWhoIsOwedId, double amount)
+    private void addDebt(Connection conn, String userWhoOwesId, String userWhoIsOwedId, String groupId, double amount)
             throws SQLException {
-        double reverseDebt = balanceSheetDAO.getBalance(conn, userWhoIsOwedId, userWhoOwesId);
+        double reverseDebt = balanceSheetDAO.getBalance(conn, userWhoIsOwedId, userWhoOwesId, groupId);
 
         if (reverseDebt > 0) {
             if (reverseDebt >= amount) {
                 double newReverseDebt = reverseDebt - amount;
-                balanceSheetDAO.setBalance(conn, userWhoIsOwedId, userWhoOwesId, newReverseDebt);
+                balanceSheetDAO.setBalance(conn, userWhoIsOwedId, userWhoOwesId, groupId, newReverseDebt);
                 return;
             } else {
-                balanceSheetDAO.setBalance(conn, userWhoIsOwedId, userWhoOwesId, 0.0);
+                balanceSheetDAO.setBalance(conn, userWhoIsOwedId, userWhoOwesId, groupId, 0.0);
                 amount = amount - reverseDebt;
             }
         }
 
-        double currentDebt = balanceSheetDAO.getBalance(conn, userWhoOwesId, userWhoIsOwedId);
-        balanceSheetDAO.setBalance(conn, userWhoOwesId, userWhoIsOwedId, currentDebt + amount);
+        double currentDebt = balanceSheetDAO.getBalance(conn, userWhoOwesId, userWhoIsOwedId, groupId);
+        balanceSheetDAO.setBalance(conn, userWhoOwesId, userWhoIsOwedId, groupId, currentDebt + amount);
     }
 
-    public void showBalanceSheet(List<User> users) {
+    public void showBalanceSheet(List<User> users, String groupId) {
         try {
-            Map<String, Map<String, Double>> balanceSheet = balanceSheetDAO.getAllBalances();
+            Map<String, Map<String, Double>> balanceSheet = balanceSheetDAO.getBalances(groupId);
 
             System.out.println("---------------------------------------");
-            System.out.println("Balance Sheet (DB):");
+            if ("GLOBAL_AGGREGATE".equals(groupId)) {
+                System.out.println("Global Balance Sheet:");
+            } else if (groupId == null) {
+                System.out.println("Balance Sheet (Non-Group):");
+            } else {
+                System.out.println("Balance Sheet (Group " + groupId + "):");
+            }
+
             boolean isEmpty = true;
 
             for (String userOwesId : balanceSheet.keySet()) {

@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ExpenseDAO {
-    public void addExpense(Connection conn, Expense expense) throws SQLException {
-        String insertExpense = "INSERT INTO expenses (id, amount, paid_by, type, description) VALUES (?, ?, ?, ?, ?)";
+    public void addExpense(Connection conn, Expense expense, String groupId) throws SQLException {
+        String insertExpense = "INSERT INTO expenses (id, amount, paid_by, type, description, group_id) VALUES (?, ?, ?, ?, ?, ?)";
         String insertSplit = "INSERT INTO splits (expense_id, user_id, amount, percent) VALUES (?, ?, ?, ?)";
 
         try (PreparedStatement expenseStmt = conn.prepareStatement(insertExpense)) {
@@ -16,6 +16,11 @@ public class ExpenseDAO {
             expenseStmt.setString(3, expense.getPaidBy().getId());
             expenseStmt.setString(4, expense.getExpenseType().name());
             expenseStmt.setString(5, expense.getDescription());
+            if (groupId == null || groupId.isEmpty()) {
+                expenseStmt.setNull(6, Types.VARCHAR);
+            } else {
+                expenseStmt.setString(6, groupId);
+            }
             expenseStmt.executeUpdate();
         }
 

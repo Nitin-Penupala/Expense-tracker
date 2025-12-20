@@ -35,18 +35,21 @@ public class VerifyPersistence {
              manager.addExpense(ExpenseType.EQUAL, 100.0, userAId, splits, "Test Expense " + uniqueSuffix);
              
              System.out.println("Verifying Database Content directly...");
-
+             try (Connection conn = DBConnection.getConnection();
+                  Statement stmt = conn.createStatement()) {
                   
-                 String checkBalance = "SELECT amount FROM balance_sheet WHERE user_who_owes='" + userBId + "' AND user_who_is_owed='" + userAId + "'";
-                 try (ResultSet rs = stmt.executeQuery(checkBa
-
+                 String checkBalance = "SELECT amount FROM balance_sheet WHERE user_who_owes='" + userBId + "' AND user_who_is_owed='" + userAId + "' AND group_id='GLOBAL'";
+                 try (ResultSet rs = stmt.executeQuery(checkBalance)) {
+                     if (rs.next()) {
+                         double amount = rs.getDouble("amount");
                          if (Math.abs(amount - 50.0) < 0.01) {
                              System.out.println("SUCCESS: DB check passed. " + userBId + " owes " + userAId + ": " + amount);
                          } else {
                              System.out.println("FAILURE: DB check failed. Expected 50.0, got " + amount);
                          }
                      } else {
-                         System.out.println("FAILURE: No record found in balance_sheet table for these users.");
+                         // Check default group_id logic if needed
+                         System.out.println("FAILURE: No record found in balance_sheet table for these users (GLOBAL).");
                      }
                  }
              }
@@ -55,6 +58,7 @@ public class VerifyPersistence {
              manager.showBalances();
              
         } catch (Exception e) {
-            e
-
-            
+            e.printStackTrace();
+        }
+    }
+}
