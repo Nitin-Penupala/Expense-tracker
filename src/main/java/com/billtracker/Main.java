@@ -14,7 +14,6 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("Welcome to Bill Tracker!");
 
-        // Check Database Connection
         try (java.sql.Connection conn = com.billtracker.dao.DBConnection.getConnection()) {
             if (conn != null) {
                 System.out.println("Database connected successfully!");
@@ -22,7 +21,7 @@ public class Main {
         } catch (java.sql.SQLException e) {
             System.out.println("Failed to connect to database: " + e.getMessage());
             System.out.println("Please ensure the database 'bill_tracker' exists and credentials are correct.");
-            // Optional: return; // to stop if DB is critical
+
         }
 
         while (true) {
@@ -131,17 +130,17 @@ public class Main {
             User user = expenseManager.getUser(userId);
             if (user == null) {
                 System.out.println("User not found: " + userId);
-                // In a real app we might retry or abort. Here we just abort expense creation.
+
                 return;
             }
 
-            if (typeChoice == 1) { // EQUAL
+            if (typeChoice == 1) {
                 splits.add(new EqualSplit(user));
-            } else if (typeChoice == 2) { // EXACT
+            } else if (typeChoice == 2) {
                 System.out.print("Enter amount owed by " + user.getName() + ": ");
                 double share = Double.parseDouble(scanner.nextLine());
                 splits.add(new ExactSplit(user, share));
-            } else if (typeChoice == 3) { // PERCENT
+            } else if (typeChoice == 3) {
                 System.out.print("Enter percentage owed by " + user.getName() + ": ");
                 double percent = Double.parseDouble(scanner.nextLine());
                 splits.add(new PercentSplit(user, percent));

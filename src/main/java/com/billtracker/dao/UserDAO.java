@@ -12,8 +12,8 @@ public class UserDAO {
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, user.getId());
             pstmt.setString(2, user.getName());
-            pstmt.setString(3, user.getEmail()); // assuming email exists
-            pstmt.setString(4, user.getPhone()); // assuming phone exists
+            pstmt.setString(3, user.getEmail());
+            pstmt.setString(4, user.getPhone());
             pstmt.executeUpdate();
         }
     }
@@ -33,7 +33,7 @@ public class UserDAO {
                 }
             }
         }
-        return null; // Not found
+        return null;
     }
 
     public List<User> getAllUsers() throws SQLException {

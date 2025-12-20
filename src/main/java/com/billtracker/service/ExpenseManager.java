@@ -4,15 +4,11 @@ import com.billtracker.dao.ExpenseDAO;
 import com.billtracker.dao.UserDAO;
 import com.billtracker.model.*;
 
+import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class ExpenseManager {
-    // private List<User> users; // Removed in favor of DAO
-    // private List<Expense> expenses; // Removed in favor of DAO
     private UserDAO userDAO;
     private ExpenseDAO expenseDAO;
     private BalanceSheetService balanceSheetService;
@@ -21,8 +17,6 @@ public class ExpenseManager {
         this.userDAO = new UserDAO();
         this.expenseDAO = new ExpenseDAO();
         this.balanceSheetService = new BalanceSheetService();
-        // Ideally we should load existing expenses to rebuild balance sheet on startup
-        // But for now we start fresh or need a way to load.
     }
 
     public void addUser(User user) {
@@ -40,11 +34,35 @@ public class ExpenseManager {
             return;
 
         Expense expense = ExpenseService.createExpense(expenseType, amount, paidBy, splits, description);
+
+        Connection conn = null;
         try {
-            expenseDAO.addExpense(expense);
-            balanceSheetService.updateBalances(expense);
+            conn = com.billtracker.dao.DBConnection.getConnection();
+            conn.setAutoCommit(false);
+
+            expenseDAO.addExpense(conn, expense);
+            balanceSheetService.updateBalances(conn, expense);
+
+            conn.commit();
+            System.out.println("Expense added and balances updated successfully.");
         } catch (SQLException e) {
-            System.out.println("Error adding expense to DB: " + e.getMessage());
+            System.out.println("Error adding expense/updating balance: " + e.getMessage());
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -58,12 +76,6 @@ public class ExpenseManager {
     }
 
     public void showBalances() {
-        // Balances are still in memory in BalanceSheetService.
-        // If app restarts, they are lost unless we replay expenses.
-        // For 'Integrate MySQL', persisting data is step 1.
-        // Replaying is step 2 (advanced).
-        // To support current session, we pass current users list if needed, or fetch
-        // all.
         try {
             List<User> allUsers = userDAO.getAllUsers();
             balanceSheetService.showBalanceSheet(allUsers);

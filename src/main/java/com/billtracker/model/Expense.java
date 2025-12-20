@@ -8,10 +8,10 @@ public class Expense {
     private User paidBy;
     private List<Split> splits;
     private ExpenseType expenseType;
-    // Optional: Group reference, Metadata like description, etc.
     private String description;
 
-    public Expense(String id, double amount, User paidBy, List<Split> splits, ExpenseType expenseType, String description) {
+    public Expense(String id, double amount, User paidBy, List<Split> splits, ExpenseType expenseType,
+            String description) {
         this.id = id;
         this.amount = amount;
         this.paidBy = paidBy;
@@ -20,10 +20,27 @@ public class Expense {
         this.description = description;
     }
 
-    public String getId() { return id; }
-    public double getAmount() { return amount; }
-    public User getPaidBy() { return paidBy; }
-    public List<Split> getSplits() { return splits; }
-    public ExpenseType getExpenseType() { return expenseType; }
-    public String getDescription() { return description; }
+    public String getId() {
+        return id;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    public User getPaidBy() {
+        return paidBy;
+    }
+
+    public List<Split> getSplits() {
+        return splits;
+    }
+
+    public ExpenseType getExpenseType() {
+        return expenseType;
+    }
+
+    public String getDescription() {
+        return description;
+    }
 }

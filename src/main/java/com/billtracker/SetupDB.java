@@ -46,6 +46,15 @@ public class SetupDB {
                     "FOREIGN KEY (expense_id) REFERENCES expenses(id), " +
                     "FOREIGN KEY (user_id) REFERENCES users(id))");
 
+            System.out.println("Creating table 'balance_sheet'...");
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS balance_sheet (" +
+                    "user_who_owes VARCHAR(50), " +
+                    "user_who_is_owed VARCHAR(50), " +
+                    "amount DECIMAL(10, 2), " +
+                    "PRIMARY KEY (user_who_owes, user_who_is_owed), " +
+                    "FOREIGN KEY (user_who_owes) REFERENCES users(id), " +
+                    "FOREIGN KEY (user_who_is_owed) REFERENCES users(id))");
+
             System.out.println("Database setup completed successfully!");
 
         } catch (SQLException e) {
